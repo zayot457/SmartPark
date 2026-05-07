@@ -1,0 +1,6 @@
+Flask
+Flask-JWT-Extended
+opencv-python
+pytesseract
+numpy
+Pillow

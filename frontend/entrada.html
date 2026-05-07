@@ -1,0 +1,277 @@
+<!--
+    SmartPark
+    Autor: Cristiano Junior
+    TCC 2026
+-->
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPark - Entrada</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1f3c88, #4b79d8);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #222;
+        }
+
+        .card {
+            background: #fff;
+            width: 430px;
+            padding: 32px;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1f3c88;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 28px;
+        }
+
+        h2 {
+            color: #1f3c88;
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 13px;
+            border: 1px solid #c7c7c7;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1f3c88;
+        }
+
+        ::placeholder {
+            color: #888;
+        }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 10px;
+            background: #1f3c88;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        button:hover {
+            background: #162b63;
+        }
+
+        .btn-voltar {
+            background: #777;
+            margin-bottom: 8px;
+        }
+
+        .btn-voltar:hover {
+            background: #555;
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        .resultado {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 10px;
+            background: #f3f5f9;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
+
+        .ok {
+            color: #0b7a32;
+            font-weight: bold;
+        }
+
+        .erro {
+            color: #b00020;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <h1>SmartPark</h1>
+        <div class="subtitle">Sistema inteligente de estacionamento</div>
+
+        <div class="step active" id="step1">
+            <h2>1. Cadastro de Usuário</h2>
+
+            <input type="text" id="nome" placeholder="Nome">
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="senha" placeholder="Senha">
+
+            <select id="tipo">
+                <option value="admin">Admin</option>
+                <option value="operador">Operador</option>
+            </select>
+
+            <button onclick="irParaVeiculo()">OK</button>
+
+            <div class="resultado" id="resultadoUser"></div>
+        </div>
+
+        <div class="step" id="step2">
+            <h2>2. Entrada do Veículo</h2>
+
+            <input type="file" id="imagem" accept="image/*">
+
+            <button class="btn-voltar" onclick="voltarCadastro()">Voltar</button>
+            <button onclick="finalizarEntrada()">Finalizar cadastro</button>
+
+            <div class="resultado" id="resultadoFinal"></div>
+        </div>
+    </div>
+
+    <script>
+        function irParaVeiculo() {
+            const nome = document.getElementById("nome").value;
+            const email = document.getElementById("email").value;
+            const senha = document.getElementById("senha").value;
+            const tipo = document.getElementById("tipo").value;
+            const resultado = document.getElementById("resultadoUser");
+
+            if (!nome || !email || !senha || !tipo) {
+                resultado.innerHTML = "<span class='erro'>Preencha todos os campos.</span>";
+                return;
+            }
+
+            resultado.innerText = "";
+
+            document.getElementById("step1").classList.remove("active");
+            document.getElementById("step2").classList.add("active");
+        }
+
+        function voltarCadastro() {
+            document.getElementById("step2").classList.remove("active");
+            document.getElementById("step1").classList.add("active");
+        }
+
+        async function finalizarEntrada() {
+            const resultado = document.getElementById("resultadoFinal");
+
+            const nome = document.getElementById("nome").value;
+            const email = document.getElementById("email").value;
+            const senha = document.getElementById("senha").value;
+            const tipo = document.getElementById("tipo").value;
+            const arquivo = document.getElementById("imagem").files[0];
+
+            if (!arquivo) {
+                resultado.innerHTML = "<span class='erro'>Selecione uma imagem do veículo.</span>";
+                return;
+            }
+
+            resultado.innerText = "Cadastrando usuário...";
+
+            try {
+                const userResponse = await fetch("http://127.0.0.1:8000/api/register", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({ nome, email, senha, tipo })
+                });
+
+                const userData = await userResponse.json();
+
+                if (!userResponse.ok) {
+                    resultado.innerText = "Erro ao cadastrar usuário:\n\n" + JSON.stringify(userData, null, 2);
+                    return;
+                }
+
+                resultado.innerText = "Detectando placa e dados do veículo...";
+
+                const formData = new FormData();
+                formData.append("image", arquivo);
+
+                const ocrResponse = await fetch("http://127.0.0.1:5000/read-plate", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const dadosOCR = await ocrResponse.json();
+
+                if (!ocrResponse.ok) {
+                    resultado.innerText = "Erro OCR:\n\n" + JSON.stringify(dadosOCR, null, 2);
+                    return;
+                }
+
+                resultado.innerText = "Salvando veículo no banco...";
+
+                const vehicleResponse = await fetch("http://127.0.0.1:8000/api/vehicles", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify({
+                        placa: dadosOCR.placa,
+                        modelo: dadosOCR.modelo,
+                        cor: dadosOCR.cor,
+                        fabricante: dadosOCR.fabricante
+                    })
+                });
+
+                const vehicleData = await vehicleResponse.json();
+
+                if (!vehicleResponse.ok) {
+                    resultado.innerText = "Erro ao cadastrar veículo:\n\n" + JSON.stringify(vehicleData, null, 2);
+                    return;
+                }
+
+                resultado.innerHTML =
+                    "<span class='ok'>Entrada registrada com sucesso!</span><br><br>" +
+                    "Usuário: " + nome + "<br>" +
+                    "Tipo: " + tipo + "<br><br>" +
+                    "Placa: " + dadosOCR.placa + "<br>" +
+                    "Fabricante: " + dadosOCR.fabricante + "<br>" +
+                    "Modelo: " + dadosOCR.modelo + "<br>" +
+                    "Cor: " + dadosOCR.cor;
+
+            } catch (erro) {
+                resultado.innerText = "Erro de conexão:\n\n" + erro;
+            }
+        }
+    </script>
+
+</body>
+</html>

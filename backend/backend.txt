@@ -1,0 +1,15 @@
+backend/
+├── app/
+│   ├── Http/
+│   │   └── Controllers/
+│   │       └── VehicleController.php
+│   └── Models/
+│       ├── Vehicle.php
+│       └── ParkingRecord.php
+├── database/
+│   └── migrations/
+├── routes/
+│   └── api.php
+├── .env
+├── composer.json
+└── Dockerfile

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPark - Saída</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1f3c88, #4b79d8);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #222;
+        }
+
+        .card {
+            background: #fff;
+            width: 430px;
+            padding: 32px;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1f3c88;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 28px;
+        }
+
+        h2 {
+            color: #1f3c88;
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 13px;
+            border: 1px solid #c7c7c7;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 10px;
+            background: #1f3c88;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        button:hover {
+            background: #162b63;
+        }
+
+        .resultado {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 10px;
+            background: #f3f5f9;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
+
+        .ok {
+            color: #0b7a32;
+            font-weight: bold;
+        }
+
+        .erro {
+            color: #b00020;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <h1>SmartPark</h1>
+        <div class="subtitle">Registro de saída do veículo</div>
+
+        <h2>Saída de Veículo</h2>
+
+        <input type="file" id="imagem" accept="image/*">
+
+        <button onclick="registrarSaida()">
+            Detectar placa e registrar saída
+        </button>
+
+        <div class="resultado" id="resultado"></div>
+    </div>
+
+    <script>
+        async function registrarSaida() {
+            const resultado = document.getElementById("resultado");
+            const arquivo = document.getElementById("imagem").files[0];
+
+            if (!arquivo) {
+                resultado.innerHTML =
+                    "<span class='erro'>Selecione uma imagem do veículo.</span>";
+                return;
+            }
+
+            resultado.innerText = "Detectando dados do veículo...";
+
+            const formData = new FormData();
+            formData.append("image", arquivo);
+
+            try {
+                const ocrResponse = await fetch("http://127.0.0.1:5000/read-plate", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const dadosOCR = await ocrResponse.json();
+
+                if (!ocrResponse.ok) {
+                    resultado.innerText =
+                        "Erro OCR:\n\n" +
+                        JSON.stringify(dadosOCR, null, 2);
+                    return;
+                }
+
+                resultado.innerText =
+                    "Placa detectada: " + dadosOCR.placa +
+                    "\nRegistrando saída...";
+
+                const saidaResponse = await fetch(
+                    "http://127.0.0.1:8000/api/vehicle-exit/" + dadosOCR.placa,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Accept": "application/json"
+                        }
+                    }
+                );
+
+                const saidaData = await saidaResponse.json();
+
+                if (!saidaResponse.ok) {
+                    resultado.innerHTML =
+                        "<span class='erro'>Veículo não encontrado no banco.</span><br><br>" +
+                        "Placa: " + dadosOCR.placa + "<br>" +
+                        "Fabricante: " + dadosOCR.fabricante + "<br>" +
+                        "Modelo: " + dadosOCR.modelo + "<br>" +
+                        "Cor: " + dadosOCR.cor;
+                    return;
+                }
+
+                resultado.innerHTML =
+                    "<span class='ok'>Saída registrada com sucesso!</span><br><br>" +
+                    "Placa: " + dadosOCR.placa + "<br>" +
+                    "Fabricante: " + dadosOCR.fabricante + "<br>" +
+                    "Modelo: " + dadosOCR.modelo + "<br>" +
+                    "Cor: " + dadosOCR.cor + "<br>" +
+                    "Status: " + saidaData.vehicle.status;
+
+            } catch (erro) {
+                resultado.innerHTML =
+                    "<span class='erro'>Erro de conexão.</span>";
+            }
+        }
+    </script>
+
+</body>
+</html>

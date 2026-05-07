@@ -1,0 +1,411 @@
+<!--
+    SmartPark
+    Autor: Cristiano Junior
+    TCC 2026
+-->
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPark</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1f3c88, #4b79d8);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #222;
+        }
+
+        .card {
+            background: white;
+            width: 430px;
+            padding: 32px;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #1f3c88;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 13px;
+            border: 1px solid #c7c7c7;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 10px;
+            background: #1f3c88;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        button:hover { background: #162b63; }
+
+        .btn-secundario { background: #777; }
+        .btn-secundario:hover { background: #555; }
+
+        .btn-saida { background: #0b7a32; }
+        .btn-saida:hover { background: #075823; }
+
+        .tela { display: none; }
+        .tela.active { display: block; }
+
+        .resultado {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 10px;
+            background: #f3f5f9;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
+
+        .ok { color: #0b7a32; font-weight: bold; }
+        .erro { color: #b00020; font-weight: bold; }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+    <h1>SmartPark</h1>
+    <div class="subtitle">Sistema inteligente de estacionamento</div>
+
+    <div id="inicio" class="tela active">
+        <h2>Bem-vindo</h2>
+
+        <button onclick="abrirTela('cadastro')">
+            Cadastrar
+        </button>
+
+        <button class="btn-secundario" onclick="abrirTela('login')">
+            Já tenho cadastro
+        </button>
+    </div>
+
+    <div id="cadastro" class="tela">
+        <h2>Cadastro de Usuário</h2>
+
+        <input type="text" id="cadNome" placeholder="Nome">
+        <input type="email" id="cadEmail" placeholder="Email">
+        <input type="password" id="cadSenha" placeholder="Senha">
+
+        <select id="cadTipo">
+            <option value="admin">Admin</option>
+            <option value="operador">Operador</option>
+        </select>
+
+        <button onclick="cadastrarUsuario()">Cadastrar</button>
+
+        <button class="btn-secundario" onclick="abrirTela('inicio')">
+            Voltar
+        </button>
+
+        <div class="resultado" id="resultadoCadastro"></div>
+    </div>
+
+    <div id="login" class="tela">
+        <h2>Login do Operador</h2>
+
+        <input type="email" id="loginEmail" placeholder="Email">
+        <input type="password" id="loginSenha" placeholder="Senha">
+
+        <button onclick="fazerLogin()">Entrar</button>
+
+        <button class="btn-secundario" onclick="abrirTela('inicio')">
+            Voltar
+        </button>
+
+        <div class="resultado" id="resultadoLogin"></div>
+    </div>
+
+    <div id="menu" class="tela">
+        <h2>Menu Principal</h2>
+
+        <button onclick="abrirTela('entrada')">
+            Entrada de Veículo
+        </button>
+
+        <button class="btn-saida" onclick="abrirTela('saida')">
+            Saída de Veículo
+        </button>
+
+        <button class="btn-secundario" onclick="abrirTela('login')">
+            Sair
+        </button>
+    </div>
+
+    <div id="entrada" class="tela">
+        <h2>Entrada de Veículo</h2>
+
+        <input type="file" id="imagemEntrada" accept="image/*">
+
+        <button onclick="registrarEntrada()">
+            Detectar e registrar entrada
+        </button>
+
+        <button class="btn-secundario" onclick="abrirTela('menu')">
+            Voltar
+        </button>
+
+        <div class="resultado" id="resultadoEntrada"></div>
+    </div>
+
+    <div id="saida" class="tela">
+        <h2>Saída de Veículo</h2>
+
+        <input type="file" id="imagemSaida" accept="image/*">
+
+        <button onclick="registrarSaida()">
+            Detectar e registrar saída
+        </button>
+
+        <button class="btn-secundario" onclick="abrirTela('menu')">
+            Voltar
+        </button>
+
+        <div class="resultado" id="resultadoSaida"></div>
+    </div>
+</div>
+
+<script>
+    let usuariosCadastrados = [];
+
+    function abrirTela(tela) {
+        document.querySelectorAll(".tela").forEach(div => {
+            div.classList.remove("active");
+        });
+
+        document.getElementById(tela).classList.add("active");
+    }
+
+    async function cadastrarUsuario() {
+        const resultado = document.getElementById("resultadoCadastro");
+
+        const nome = document.getElementById("cadNome").value;
+        const email = document.getElementById("cadEmail").value;
+        const senha = document.getElementById("cadSenha").value;
+        const tipo = document.getElementById("cadTipo").value;
+
+        if (!nome || !email || !senha || !tipo) {
+            resultado.innerHTML = "<span class='erro'>Preencha todos os campos.</span>";
+            return;
+        }
+
+        resultado.innerText = "Cadastrando usuário...";
+
+        try {
+            const resposta = await fetch("http://127.0.0.1:8000/api/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    nome: nome,
+                    email: email,
+                    senha: senha,
+                    tipo: tipo
+                })
+            });
+
+            const dados = await resposta.json();
+
+            if (!resposta.ok) {
+                resultado.innerText = "Erro no cadastro:\n\n" + JSON.stringify(dados, null, 2);
+                return;
+            }
+
+            usuariosCadastrados.push({
+                nome: nome,
+                email: email,
+                senha: senha,
+                tipo: tipo
+            });
+
+            resultado.innerHTML =
+                "<span class='ok'>Usuário cadastrado com sucesso!</span><br><br>" +
+                "Nome: " + nome + "<br>" +
+                "Tipo: " + tipo;
+
+            setTimeout(() => {
+                abrirTela("login");
+            }, 1000);
+
+        } catch (erro) {
+            resultado.innerText = "Erro de conexão com Laravel:\n\n" + erro;
+        }
+    }
+
+    function fazerLogin() {
+        const resultado = document.getElementById("resultadoLogin");
+
+        const email = document.getElementById("loginEmail").value;
+        const senha = document.getElementById("loginSenha").value;
+
+        if (!email || !senha) {
+            resultado.innerHTML = "<span class='erro'>Informe email e senha.</span>";
+            return;
+        }
+
+        const usuario = usuariosCadastrados.find(user =>
+            user.email === email && user.senha === senha
+        );
+
+        if (!usuario) {
+            resultado.innerHTML =
+                "<span class='erro'>Usuário não encontrado nesta sessão.</span><br><br>" +
+                "Cadastre primeiro.";
+            return;
+        }
+
+        resultado.innerHTML =
+            "<span class='ok'>Login realizado com sucesso!</span><br><br>" +
+            "Bem-vindo, " + usuario.nome;
+
+        setTimeout(() => {
+            abrirTela("menu");
+        }, 700);
+    }
+
+    async function registrarEntrada() {
+        const resultado = document.getElementById("resultadoEntrada");
+        const arquivo = document.getElementById("imagemEntrada").files[0];
+
+        if (!arquivo) {
+            resultado.innerHTML = "<span class='erro'>Selecione uma imagem do veículo.</span>";
+            return;
+        }
+
+        resultado.innerText = "Detectando placa e dados do veículo...";
+
+        try {
+            const formData = new FormData();
+            formData.append("image", arquivo);
+
+            const ocrResponse = await fetch("http://127.0.0.1:5000/read-plate", {
+                method: "POST",
+                body: formData
+            });
+
+            const dadosOCR = await ocrResponse.json();
+
+            resultado.innerText = "Salvando entrada no banco...";
+
+            const vehicleResponse = await fetch("http://127.0.0.1:8000/api/vehicles", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    placa: dadosOCR.placa,
+                    fabricante: dadosOCR.fabricante,
+                    modelo: dadosOCR.modelo,
+                    cor: dadosOCR.cor
+                })
+            });
+
+            const vehicleData = await vehicleResponse.json();
+
+            if (!vehicleResponse.ok) {
+                resultado.innerText = "Erro ao salvar veículo:\n\n" + JSON.stringify(vehicleData, null, 2);
+                return;
+            }
+
+            resultado.innerHTML =
+                "<span class='ok'>Entrada registrada com sucesso!</span><br><br>" +
+                "Placa: " + dadosOCR.placa + "<br>" +
+                "Fabricante: " + dadosOCR.fabricante + "<br>" +
+                "Modelo: " + dadosOCR.modelo + "<br>" +
+                "Cor: " + dadosOCR.cor + "<br>" +
+                "Status: " + vehicleData.status;
+
+        } catch (erro) {
+            resultado.innerText = "Erro de conexão:\n\n" + erro;
+        }
+    }
+
+    async function registrarSaida() {
+        const resultado = document.getElementById("resultadoSaida");
+        const arquivo = document.getElementById("imagemSaida").files[0];
+
+        if (!arquivo) {
+            resultado.innerHTML = "<span class='erro'>Selecione uma imagem do veículo.</span>";
+            return;
+        }
+
+        resultado.innerText = "Detectando placa e dados do veículo...";
+
+        try {
+            const formData = new FormData();
+            formData.append("image", arquivo);
+
+            const ocrResponse = await fetch("http://127.0.0.1:5000/read-plate", {
+                method: "POST",
+                body: formData
+            });
+
+            const dadosOCR = await ocrResponse.json();
+
+            resultado.innerText = "Registrando saída no banco...";
+
+            const saidaResponse = await fetch(
+                "http://127.0.0.1:8000/api/vehicle-exit/" + dadosOCR.placa,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            const saidaData = await saidaResponse.json();
+
+            if (!saidaResponse.ok) {
+                resultado.innerText = "Erro ao registrar saída:\n\n" + JSON.stringify(saidaData, null, 2);
+                return;
+            }
+
+            resultado.innerHTML =
+                "<span class='ok'>Saída registrada com sucesso!</span><br><br>" +
+                "Placa: " + dadosOCR.placa + "<br>" +
+                "Fabricante: " + dadosOCR.fabricante + "<br>" +
+                "Modelo: " + dadosOCR.modelo + "<br>" +
+                "Cor: " + dadosOCR.cor + "<br>" +
+                "Status: " + saidaData.vehicle.status;
+
+        } catch (erro) {
+            resultado.innerText = "Erro de conexão:\n\n" + erro;
+        }
+    }
+</script>
+
+</body>
+</html>
